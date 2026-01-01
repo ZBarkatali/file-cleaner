@@ -1,0 +1,23 @@
+The File Cleaner that I had previously made before now includes a "Dry-Run Mode" to safely preview changes before any files are moved.
+
+When enabled, the script will proceed to:
+- Scan files based on the configured rules
+- Print what "would possibly" happen
+- Move nothing at all
+
+This allows verification before activating the cleanup script.
+
+### How to Use Dry-Run Mode ###
+
+In `cleaner.py`, set:
+
+DRY_RUN = True
+
+Run the below in PowerShell or Command Prompt
+python cleaner.py
+
+The output should potentially read like the below:
+[DRY RUN] Would move: report_2023.txt -> quarantine/report_2023.txt
+
+If Dry-Run mode needs to be switched off, change the code for DRY_RUN to the below:
+DRY_RUN = False
