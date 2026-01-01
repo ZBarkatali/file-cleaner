@@ -1,0 +1,44 @@
+With the newly-released and revised Version 1.3 of my very first File Cleaner, this introduces support for an external config.json file, allowing behaviour to be changed without modifying the Python code.
+
+This makes the tool safer, more flexible, and suitable for non-technical users.
+
+New features include:
+
+1. External configuration via config.json
+2. Safe defaults if the config file is missing or invalid
+3. Configurable cleanup rules without editing cleaner.py
+
+With the script for the Configuration File, the script will automatically load settings from config.json if it exists in the same directory as cleaner.py
+
+If a file was missing or cannot be read for reasons to be explained, the script will then fall-back to its built-in default settings and log the event of what went on.
+
+For example, the following text below explains what the general script would be inside of the config.json file being used as support.
+
+{
+  "days_old": 30,
+  "dry_run": true,
+  "exclude_files": ["cleaner.py", "cleanup_log.txt"],
+  "exclude_folders": ["quarantine"]
+}
+
+The key configuration options that myself (Zain) needs to remember are the below:
+Key	Description
+
+days_old:   Minimum age (in days) before a file is eligible for cleanup
+dry_run:    If true, previews actions without moving files
+exclude_files:   List of filenames to always ignore
+exclude_folders:  Folder names that should never be processed
+
+Safety & Reliability
+
+1. Files are never deleted
+2. All actions are logged to cleanup_log.txt for documentation on all past ran events
+3. Dry-run mode can be enabled at any given time
+4. Invalid or missing configuration files do not cause crashes
+
+After looking at this myself and seeing why this all matters, I thought about this... separating configuration from code leads to:
+
+1. Reduces human error
+2. Allows safe changes in production
+3. Makes the tool easier to maintain and reuse for multiple clients
+
