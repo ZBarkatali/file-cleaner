@@ -1,0 +1,77 @@
+### V1.2 of File Cleanup with (Logging) ###
+
+**V1.2 helps writes an audit trail to "cleanup_log"
+
+The following code I used now is similar to the codes that I produced in V1 and V1.1:
+
+###############################################################################
+from pathlib import Path
+from datetime import datetime
+import shutil
+
+# =======================
+# CONFIG
+# =======================
+BASE_DIR = Path(__file__).parent  # folder where cleaner.py lives
+TARGET_FOLDER = BASE_DIR / "test_files"
+QUARANTINE_FOLDER = TARGET_FOLDER / "quarantine"
+LOG_FILE = BASE_DIR / "cleanup_log.txt"
+
+DAYS_OLD = -1        # -1 = include everything (for testing)
+DRY_RUN = True       # True = preview only, False = actually move
+# =======================
+
+
+def log_line(action: str, message: str) -> None:
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    with open(LOG_FILE, "a", encoding="utf-8") as f:
+        f.write(f"{timestamp} | {action:<7} | {message}\n")
+
+
+def file_age_days(path: Path) -> int:
+    modified_time = datetime.fromtimestamp(path.stat().st_mtime)
+    return (datetime.now() - modified_time).days
+
+
+def main() -> None:
+    QUARANTINE_FOLDER.mkdir(exist_ok=True)
+    log_line("START", f"DRY_RUN={DRY_RUN} DAYS_OLD={DAYS_OLD} TARGET={TARGET_FOLDER}")
+
+    if not TARGET_FOLDER.exists():
+        log_line("ERROR", f"Target folder does not exist: {TARGET_FOLDER}")
+        print(f"[ERROR] Target folder does not exist: {TARGET_FOLDER}")
+        return
+
+    moved_count = 0
+
+    for file in TARGET_FOLDER.iterdir():
+        if not file.is_file():
+            continue
+
+        # Skip anything already in quarantine
+        if file.parent == QUARANTINE_FOLDER:
+            continue
+
+        age_days = file_age_days(file)
+
+        if age_days >= DAYS_OLD:
+            destination = QUARANTINE_FOLDER / file.name
+
+            if DRY_RUN:
+                msg = f"Would move {file.name} -> {destination}"
+                print(f"[DRY RUN] {msg}")
+                log_line("DRYRUN", msg)
+            else:
+                shutil.move(str(file), str(destination))
+                msg = f"Moved {file.name} -> {destination}"
+                print(f"[MOVED] {msg}")
+                log_line("MOVED", msg)
+                moved_count += 1
+
+    log_line("DONE", f"Completed. Moved={moved_count}")
+    print(f"Done. Log written to: {LOG_FILE}")
+
+
+if __name__ == "__main__":
+    main()
+###############################################################################
