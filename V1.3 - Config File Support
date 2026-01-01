@@ -42,3 +42,122 @@ After looking at this myself and seeing why this all matters, I thought about th
 2. Allows safe changes in production
 3. Makes the tool easier to maintain and reuse for multiple clients
 
+The code that I used for this are below:
+
+from pathlib import Path
+from datetime import datetime
+import shutil
+import json
+
+# =======================
+# DEFAULT CONFIG (used if config.json missing)
+# =======================
+DEFAULT_CONFIG = {
+    "days_old": -1,
+    "dry_run": True,
+    "exclude_files": ["cleaner.py", "cleanup_log.txt"],
+    "exclude_folders": ["quarantine"],
+}
+
+# =======================
+# PATHS (no user hardcoding)
+# =======================
+BASE_DIR = Path(__file__).parent
+TARGET_FOLDER = BASE_DIR / "test_files"
+LOG_FILE = BASE_DIR / "cleanup_log.txt"
+CONFIG_FILE = BASE_DIR / "config.json"
+
+
+def log_line(action: str, message: str) -> None:
+    """Write one line to the log file (always appends)."""
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    with open(LOG_FILE, "a", encoding="utf-8") as f:
+        f.write(f"{timestamp} | {action:<7} | {message}\n")
+
+
+def file_age_days(path: Path) -> int:
+    modified_time = datetime.fromtimestamp(path.stat().st_mtime)
+    return (datetime.now() - modified_time).days
+
+
+def load_config() -> dict:
+    """Load config.json if present; otherwise return defaults."""
+    config = DEFAULT_CONFIG.copy()
+
+    if not CONFIG_FILE.exists():
+        log_line("CONFIG", "config.json not found — using defaults")
+        return config
+
+    try:
+        with open(CONFIG_FILE, "r", encoding="utf-8") as f:
+            user_cfg = json.load(f)
+
+        if isinstance(user_cfg, dict):
+            config.update(user_cfg)
+            log_line("CONFIG", "Loaded config.json successfully")
+        else:
+            log_line("CONFIG", "config.json is not an object — using defaults")
+
+    except Exception as e:
+        log_line("CONFIG", f"Failed to read config.json — using defaults ({repr(e)})")
+
+    return config
+
+
+def main() -> None:
+    cfg = load_config()
+
+    days_old = int(cfg.get("days_old", DEFAULT_CONFIG["days_old"]))
+    dry_run = bool(cfg.get("dry_run", DEFAULT_CONFIG["dry_run"]))
+    exclude_files = set(cfg.get("exclude_files", DEFAULT_CONFIG["exclude_files"]))
+    exclude_folders = set(cfg.get("exclude_folders", DEFAULT_CONFIG["exclude_folders"]))
+
+    quarantine_folder = TARGET_FOLDER / "quarantine"
+    quarantine_folder.mkdir(exist_ok=True)
+
+    log_line("START", f"DRY_RUN={dry_run} DAYS_OLD={days_old} TARGET={TARGET_FOLDER}")
+
+    if not TARGET_FOLDER.exists():
+        log_line("ERROR", f"Target folder does not exist: {TARGET_FOLDER}")
+        print(f"[ERROR] Target folder does not exist: {TARGET_FOLDER}")
+        return
+
+    moved_count = 0
+    considered = 0
+
+    for file in TARGET_FOLDER.iterdir():
+        if not file.is_file():
+            continue
+
+        # Exclude by filename
+        if file.name in exclude_files:
+            continue
+
+        # Exclude by parent folder name (e.g., "quarantine")
+        if file.parent.name in exclude_folders:
+            continue
+
+        age_days = file_age_days(file)
+        if age_days < days_old:
+            continue
+
+        considered += 1
+        destination = quarantine_folder / file.name
+
+        if dry_run:
+            msg = f"Would move {file.name} -> {destination}"
+            print(f"[DRY RUN] {msg}")
+            log_line("DRYRUN", msg)
+        else:
+            shutil.move(str(file), str(destination))
+            msg = f"Moved {file.name} -> {destination}"
+            print(f"[MOVED] {msg}")
+            log_line("MOVED", msg)
+            moved_count += 1
+
+    log_line("DONE", f"Considered={considered} Moved={moved_count}")
+    print(f"Done. Log written to: {LOG_FILE}")
+
+
+if __name__ == "__main__":
+    main()
