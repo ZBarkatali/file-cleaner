@@ -22,6 +22,88 @@ The output should potentially read like the below:
 If Dry-Run mode needs to be switched off, change the code for DRY_RUN to the below:
 DRY_RUN = False
 
+Code for Dry-Run Mode is:
+
+
+from pathlib import Path
+from datetime import datetime, timedelta
+import shutil
+
+# =======================
+# CONFIG
+# =======================
+BASE_DIR = Path(__file__).parent
+TARGET_FOLDER = BASE_DIR / "test_files"          # change if needed
+QUARANTINE_FOLDER = TARGET_FOLDER / "quarantine"
+LOG_FILE = BASE_DIR / "cleanup_log.txt"
+
+DAYS_OLD = 30          # for testing: try 0 or 1
+DRY_RUN = True         # True = preview, False = actually move
+# =======================
+
+
+def log_line(action: str, message: str) -> None:
+    ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    with open(LOG_FILE, "a", encoding="utf-8") as f:
+        f.write(f"{ts} | {action:<7} | {message}\n")
+
+
+def file_age_days(path: Path) -> int:
+    modified = datetime.fromtimestamp(path.stat().st_mtime)
+    return (datetime.now() - modified).days
+
+
+def main() -> None:
+    QUARANTINE_FOLDER.mkdir(exist_ok=True)
+
+    if not TARGET_FOLDER.exists():
+        print(f"[ERROR] Target folder does not exist: {TARGET_FOLDER}")
+        log_line("ERROR", f"Target folder does not exist: {TARGET_FOLDER}")
+        return
+
+    log_line("START", f"DRY_RUN={DRY_RUN} DAYS_OLD={DAYS_OLD} TARGET={TARGET_FOLDER}")
+
+    moved_count = 0
+    considered = 0
+
+    for item in TARGET_FOLDER.iterdir():
+        if not item.is_file():
+            continue
+
+        # Skip the quarantine folder contents (safety)
+        if item.parent == QUARANTINE_FOLDER:
+            continue
+
+        # Skip this script if it's in the target folder
+        if item.name.lower() == "cleaner.py":
+            continue
+
+        age_days = file_age_days(item)
+        if age_days < DAYS_OLD:
+            continue
+
+        considered += 1
+        destination = QUARANTINE_FOLDER / item.name
+
+        if DRY_RUN:
+            msg = f"Would move: {item.name} -> {destination}"
+            print(f"[DRY RUN] {msg}")
+            log_line("DRYRUN", msg)
+        else:
+            shutil.move(str(item), str(destination))
+            msg = f"Moved: {item.name} -> {destination}"
+            print(f"[MOVED] {msg}")
+            log_line("MOVED", msg)
+            moved_count += 1
+
+    log_line("DONE", f"Considered={considered} Moved={moved_count}")
+    print(f"Done. Log written to: {LOG_FILE}")
+
+
+if __name__ == "__main__":
+    main()
+
+
 
 #### Author ####
 
