@@ -21,3 +21,10 @@ The output should potentially read like the below:
 
 If Dry-Run mode needs to be switched off, change the code for DRY_RUN to the below:
 DRY_RUN = False
+
+
+#### Author ####
+
+Zain Barkatali
+Barkatali Technology
+Automation & IT systems for small businesses
