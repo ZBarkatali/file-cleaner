@@ -53,3 +53,9 @@ Once the code was made, I quickly saved it inside of my Target folder along with
 Once that was done, I had opened up PowerShell, entered the file path that included the target folder in question. 
 
 Once I clicked enter, PowerShell opened up a new line with the file path in question, indicating that I am making a change somewhere in my file path. From there, I entered "python cleaner.py" and there with some messages that popped up, indicating that the job is valid and running - I quickly checked the target folder and I can confirm that now, this works :).
+
+#### Author ####
+
+Zain Barkatali
+Barkatali Technology
+Automation & IT systems for small businesses
